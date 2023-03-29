@@ -11,3 +11,5 @@ node.json
 yarn-error.log
 
 venv
+
+*.txt

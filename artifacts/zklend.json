@@ -1,0 +1,30 @@
+[
+    {
+        "name": "borrow",
+        "type": "function",
+        "inputs": [
+          {
+            "name": "token",
+            "type": "felt"
+          },
+          {
+            "name": "amount",
+            "type": "felt"
+          }
+        ]
+    },
+    {
+        "name": "deposit",
+        "type": "function",
+        "inputs": [
+          {
+            "name": "token",
+            "type": "felt"
+          },
+          {
+            "name": "amount",
+            "type": "felt"
+          }
+        ]
+    }
+  ]

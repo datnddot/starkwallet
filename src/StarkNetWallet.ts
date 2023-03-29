@@ -2,7 +2,7 @@ import fs from "fs";
 import { ensureEnvVar, uint256ToBigNumber, generateRandomStarkPrivateKey, prettyPrintFee } from "./util";
 import { Wallet, BigNumber, utils } from "ethers";
 import BN from "bn.js";
-import { Contract, ec, json, Account, Provider, uint256, hash, ProviderInterface, number } from "starknet";
+import { Contract, ec, json, Account, Provider, uint256, hash, ProviderInterface, number, stark } from "starknet";
 
 import { getStarkPair } from "./keyDerivation";
 
@@ -10,7 +10,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 // TODO: calculate this
-const ACCOUNT_CLASS_HASH = "0x4d07e40e93398ed3c76981e72dd1fd22557a78ce36c0515f679e27f0bb5bc5f";
+const ACCOUNT_CLASS_HASH = "0x058d97f7d76e78f44905cc30cb65b91ea49a4b908a76703c54197bca90f81773";
 const DEFAULT_TOKEN_ADDRESS = "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7";
 
 export class StarkNetWallet {
@@ -93,18 +93,20 @@ export class StarkNetWallet {
     console.log("Deployment Tx - Account Contract to StarkNet...");
     const compiledOZAccount = json.parse(fs.readFileSync("./artifacts/Account.json").toString("ascii"));
 
-    let starkKeyPair = getStarkPair(mnemonic, 0);
-
-    let starkKeyPub = ec.getStarkKey(starkKeyPair);
+    const starkKeyPair = ec.genKeyPair();
+    const starkKeyPub = ec.getStarkKey(starkKeyPair);
 
     let futureAccountAddress = hash.calculateContractAddressFromHash(starkKeyPub, ACCOUNT_CLASS_HASH, [starkKeyPub], 0);
 
     console.log("Future Account Address", futureAccountAddress);
 
+    const acc = new Account(provider, futureAccountAddress, starkKeyPair);
+
     // TODO: replace with declare/deploy + print future address
-    const accountResponse = await provider.deployContract({
-      contract: compiledOZAccount,
+    const accountResponse = await acc.deployAccount({
+      classHash: ACCOUNT_CLASS_HASH,
       constructorCalldata: [starkKeyPub],
+      contractAddress: futureAccountAddress,
       addressSalt: starkKeyPub,
     });
     // Wait for the deployment transaction to be accepted on StarkNet
@@ -139,15 +141,15 @@ export class StarkNetWallet {
 
     let futureAccount = new Account(provider, futureAccountAddress, starkKeyPair);
 
-    let estimateFee = await futureAccount.estimateAccountDeployFee({
-      classHash: ACCOUNT_CLASS_HASH,
-      constructorCalldata: [starkKeyPub],
-      addressSalt: starkKeyPub,
-      contractAddress: futureAccountAddress,
-    });
-    prettyPrintFee(estimateFee);
+    // let estimateFee = await futureAccount.estimateAccountDeployFee({
+    //   classHash: ACCOUNT_CLASS_HASH,
+    //   constructorCalldata: [starkKeyPub],
+    //   addressSalt: starkKeyPub,
+    //   contractAddress: futureAccountAddress,
+    // });
+    // prettyPrintFee(estimateFee);
 
-    let accountResponse = await futureAccount.deployAccount({
+    let accountResponse = futureAccount.deployAccount({
       classHash: ACCOUNT_CLASS_HASH,
       constructorCalldata: [starkKeyPub],
       addressSalt: starkKeyPub,
@@ -155,9 +157,9 @@ export class StarkNetWallet {
     });
 
     // Wait for the deployment transaction to be accepted on StarkNet
-    console.log(
-      "Waiting for Tx " + accountResponse.transaction_hash + " to be Accepted on Starknet - OZ Account Deployment...",
-    );
+    // console.log(
+    //   "Waiting for Tx " + accountResponse.transaction_hash + " to be Accepted on Starknet - OZ Account Deployment...",
+    // );
 
     return futureAccount;
   }
